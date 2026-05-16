@@ -1,0 +1,5 @@
+region,team,document_type,monthly_queries,delivery_volume,main_use_case
+Southeast Asia,Operations,SOP,1280,54000,Shipment exception lookup
+Europe,Field Service,Manual,860,21000,Product troubleshooting
+North America,Customer Support,FAQ,1430,32000,Support article search
+Global,Data Science,Report,640,12000,Research summary retrieval
