@@ -15,7 +15,7 @@ Organizations store useful knowledge in PDFs, CSV exports, internal notes, repor
 
 This project demonstrates how a lightweight RAG pipeline can help users ask natural-language questions over uploaded documents and inspect the retrieved source context behind each answer.
 
-Example internship-relevant use cases:
+Relevant use cases:
 
 - **Customer support:** search help-center articles and troubleshooting notes.
 - **Operations and logistics:** query process manuals, shipment exception guides, or SOPs.
@@ -122,24 +122,6 @@ The generated answer is shown separately from the retrieved context, giving user
 
 ---
 
-## Recruiter Demo in 60 Seconds
-
-1. Install dependencies with `pip install -r requirements.txt`.
-2. Start the app with `streamlit run app.py`.
-3. Upload `sample_document.txt` or a file from `sample_documents/`.
-4. Ask: **“What is RAG?”**
-5. Ask: **“How does RAG reduce hallucination?”**
-6. Ask: **“What are the main technical components?”**
-7. Compare the retrieved context with the generated answer.
-
-What to notice:
-
-- The app chunks the document automatically.
-- Sentence-Transformers converts chunks and questions into embeddings.
-- FAISS retrieves the top matching chunks.
-- Retrieved context is shown separately from the final answer for transparency.
-
----
 
 ## How to Run Locally
 
