@@ -16,11 +16,18 @@ class DocumentLoader:
     def __init__(self, chunk_size: int = 500, chunk_overlap: int = 50):
         """
         Initialize the document loader.
-        
+
         Args:
-            chunk_size: Number of characters per chunk
-            chunk_overlap: Number of overlapping characters between chunks
+            chunk_size: Maximum number of characters per chunk
+            chunk_overlap: Target number of overlapping characters between chunks
         """
+        if chunk_size <= 0:
+            raise ValueError("chunk_size must be greater than 0.")
+        if chunk_overlap < 0:
+            raise ValueError("chunk_overlap cannot be negative.")
+        if chunk_overlap >= chunk_size:
+            raise ValueError("chunk_overlap must be smaller than chunk_size.")
+
         self.chunk_size = chunk_size
         self.chunk_overlap = chunk_overlap
 
@@ -99,45 +106,123 @@ class DocumentLoader:
     def load_text(self, text: str) -> str:
         """
         Load and clean text from document.
-        
+
         Args:
             text: Raw text content
-            
+
         Returns:
             Cleaned text
         """
-        # Remove extra whitespace
-        text = re.sub(r'\s+', ' ', text)
-        # Remove leading/trailing whitespace
-        text = text.strip()
-        return text
+        text = re.sub(r"\s+", " ", text)
+        return text.strip()
 
     def chunk_text(self, text: str) -> List[str]:
         """
-        Split text into overlapping chunks.
-        
+        Split text into sentence-aware chunks with configurable overlap.
+
+        The method first keeps sentence boundaries where possible, then carries
+        the last few sentences from the previous chunk into the next chunk until
+        the configured overlap budget is reached. If a single sentence is longer
+        than ``chunk_size``, it is split by characters as a fallback.
+
         Args:
             text: Text to chunk
-            
+
         Returns:
             List of text chunks
         """
-        chunks = []
         text = self.load_text(text)
-        
-        # Split by sentences first for better context
-        sentences = re.split(r'(?<=[.!?])\s+', text)
-        
-        current_chunk = ""
+        if not text:
+            return []
+
+        sentences = re.split(r"(?<=[.!?])\s+", text)
+        chunks = []
+        current_sentences = []
+        current_length = 0
+
         for sentence in sentences:
-            if len(current_chunk) + len(sentence) + 1 <= self.chunk_size:
-                current_chunk += sentence + " "
-            else:
-                if current_chunk:
-                    chunks.append(current_chunk.strip())
-                current_chunk = sentence + " "
-        
-        if current_chunk:
-            chunks.append(current_chunk.strip())
-        
+            sentence = sentence.strip()
+            if not sentence:
+                continue
+
+            if len(sentence) > self.chunk_size:
+                if current_sentences:
+                    chunks.append(" ".join(current_sentences).strip())
+                    current_sentences = self._overlap_sentences(current_sentences)
+                    current_length = self._joined_length(current_sentences)
+
+                long_sentence_chunks = self._split_long_sentence(sentence)
+                chunks.extend(long_sentence_chunks[:-1])
+                current_sentences = [long_sentence_chunks[-1]] if long_sentence_chunks else []
+                current_length = self._joined_length(current_sentences)
+                continue
+
+            separator_length = 1 if current_sentences else 0
+            next_length = current_length + separator_length + len(sentence)
+
+            if current_sentences and next_length > self.chunk_size:
+                chunks.append(" ".join(current_sentences).strip())
+                current_sentences = self._overlap_sentences(current_sentences)
+                current_length = self._joined_length(current_sentences)
+
+                while current_sentences:
+                    separator_length = 1 if current_sentences else 0
+                    next_length = current_length + separator_length + len(sentence)
+                    if next_length <= self.chunk_size:
+                        break
+                    current_sentences.pop(0)
+                    current_length = self._joined_length(current_sentences)
+
+            current_sentences.append(sentence)
+            current_length = self._joined_length(current_sentences)
+
+        if current_sentences:
+            final_chunk = " ".join(current_sentences).strip()
+            if final_chunk and (not chunks or final_chunk != chunks[-1]):
+                chunks.append(final_chunk)
+
         return chunks
+
+    def _overlap_sentences(self, sentences: List[str]) -> List[str]:
+        """Return trailing sentences to reuse in the next chunk."""
+        if self.chunk_overlap == 0:
+            return []
+
+        overlap = []
+        overlap_length = 0
+        for sentence in reversed(sentences):
+            separator_length = 1 if overlap else 0
+            next_length = overlap_length + separator_length + len(sentence)
+
+            if overlap and next_length > self.chunk_overlap:
+                break
+
+            overlap.insert(0, sentence)
+            overlap_length = self._joined_length(overlap)
+
+            if overlap_length >= self.chunk_overlap:
+                break
+
+        return overlap
+
+    def _split_long_sentence(self, sentence: str) -> List[str]:
+        """Split a long sentence into character windows with overlap."""
+        step = max(1, self.chunk_size - self.chunk_overlap)
+        chunks = []
+        start = 0
+
+        while start < len(sentence):
+            end = start + self.chunk_size
+            chunks.append(sentence[start:end].strip())
+            if end >= len(sentence):
+                break
+            start += step
+
+        return [chunk for chunk in chunks if chunk]
+
+    @staticmethod
+    def _joined_length(sentences: List[str]) -> int:
+        """Calculate the length of sentences joined with a single space."""
+        if not sentences:
+            return 0
+        return sum(len(sentence) for sentence in sentences) + len(sentences) - 1
