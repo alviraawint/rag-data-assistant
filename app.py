@@ -59,29 +59,37 @@ with col1:
     st.markdown('<div class="section-header">📤 Upload Document</div>', unsafe_allow_html=True)
     
     uploaded_file = st.file_uploader(
-        "Choose a text file to upload",
-        type=["txt"],
-        help="Upload a .txt file to process"
+        "Choose a document to upload",
+        type=["txt", "pdf", "csv"],
+        help="Upload a .txt, .pdf, or .csv file to process"
     )
     
     if uploaded_file is not None:
         # Read and process the document
         with st.spinner("Processing document..."):
-            text_content = uploaded_file.read().decode("utf-8", errors="ignore")
-            
-            # Load and chunk the document
-            loader = DocumentLoader(chunk_size=chunk_size, chunk_overlap=chunk_overlap)
-            chunks = loader.chunk_text(text_content)
-            
-            # Store in session state
-            st.session_state.chunks = chunks
-            st.session_state.document_loaded = True
-            
-            # Build retriever index
-            st.session_state.retriever.build_index(chunks)
-        
-        st.success(f"✅ Document processed! Created {len(chunks)} chunks.")
-        st.info(f"File: {uploaded_file.name} | Size: {len(text_content):,} characters")
+            try:
+                # Load and chunk the document
+                loader = DocumentLoader(chunk_size=chunk_size, chunk_overlap=chunk_overlap)
+                text_content = loader.load_file(uploaded_file)
+                chunks = loader.chunk_text(text_content)
+
+                if not chunks:
+                    raise ValueError("No readable text was found in this file.")
+
+                # Store in session state
+                st.session_state.chunks = chunks
+                st.session_state.document_loaded = True
+
+                # Build retriever index
+                st.session_state.retriever.build_index(chunks)
+            except Exception as error:
+                st.session_state.document_loaded = False
+                st.session_state.chunks = []
+                st.error(f"Could not process this file. {error}")
+
+        if st.session_state.document_loaded:
+            st.success(f"✅ Document processed! Created {len(chunks)} chunks.")
+            st.info(f"File: {uploaded_file.name} | Size: {len(text_content):,} characters")
 
 with col2:
     st.markdown('<div class="section-header">📊 Document Statistics</div>', unsafe_allow_html=True)

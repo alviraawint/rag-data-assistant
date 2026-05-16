@@ -10,7 +10,7 @@
 
 ## 🎯 Project Overview
 
-This project implements a complete **Retrieval-Augmented Generation (RAG)** system that enables users to upload text documents and ask natural language questions, receiving contextually relevant answers powered by semantic search. The system demonstrates core NLP concepts including:
+This project implements a complete **Retrieval-Augmented Generation (RAG)** system that enables users to upload TXT, PDF, and CSV documents and ask natural language questions, receiving contextually relevant answers powered by semantic search. The system demonstrates core NLP concepts including:
 
 - **Document Chunking Strategies** - Intelligent text splitting with overlapping windows
 - **Dense Vector Embeddings** - Semantic representation of text using transformer models
@@ -48,7 +48,7 @@ This project combines the strengths of both approaches:
 - ✅ **Relevance Scoring** - Provides confidence metrics for retrieved results
 
 ### User Interface
-- 📤 **File Upload** - Support for `.txt` documents with automatic encoding detection
+- 📤 **File Upload** - Support for `.txt`, `.pdf`, and `.csv` documents
 - 📊 **Document Statistics** - Real-time analysis of chunking strategy effectiveness
 - ⚙️ **Hyperparameter Control** - Adjustable chunk size and overlap via interactive sliders
 - 💭 **Multi-Stage Results** - Shows retrieved context, relevance scores, and generated answers
@@ -61,9 +61,11 @@ This project combines the strengths of both approaches:
 | Component | Technology | Purpose |
 |-----------|-----------|---------|
 | **Framework** | Streamlit 1.35.0 | Web UI and session management |
-| **NLP** | Sentence-Transformers 2.2.2 | Dense vector embeddings |
+| **NLP** | Sentence-Transformers 3.0.1 | Dense vector embeddings |
 | **Vector DB** | FAISS 1.7.4 | Approximate nearest neighbor search |
 | **Computing** | PyTorch 2.0.1 | Deep learning backend |
+| **Data Files** | Pandas 2.x | CSV parsing and row-to-text conversion |
+| **PDF Parsing** | pypdf 4.2.0 | Text extraction from PDF pages |
 | **Math** | NumPy 1.24.3 | Numerical operations |
 | **Python** | 3.8+ | Language runtime |
 
@@ -71,6 +73,8 @@ This project combines the strengths of both approaches:
 - **Sentence-Transformers**: Pre-trained models specifically optimized for sentence embeddings (vs. base BERT)
 - **FAISS**: Facebook's production-grade library for similarity search at scale (used by Meta, Spotify, etc.)
 - **Streamlit**: Rapid prototyping without frontend expertise; industry standard for data apps
+- **pypdf**: Simple PDF text extraction without external services
+- **Pandas**: Reliable CSV loading and dataframe-to-text formatting
 
 ---
 
@@ -133,7 +137,7 @@ This project combines the strengths of both approaches:
 ### Data Flow Diagram
 
 ```
-                 INPUT: User Document (*.txt)
+           INPUT: User Document (*.txt, *.pdf, *.csv)
                             ↓
                   [DocumentLoader]
                             ↓
@@ -233,53 +237,25 @@ Relevance Score: σ = 1 / (1 + d)     [0, 1] range
 
 ## 📸 Screenshots & Usage Examples
 
-### Interface Overview
-The Streamlit application provides three main sections:
+### Home Page & Document Upload
+The main screen keeps the workflow simple: upload a TXT, PDF, or CSV file, adjust chunking settings, and view document statistics after processing.
 
-**1. Document Upload & Statistics**
-```
-┌─ Upload Document ────────────────┐
-│ [Choose a text file] ← sample.txt│
-│ ✅ Document processed!           │
-│ File: sample.txt | Size: 5,234   │
-│                                  │
-│ Statistics:                      │
-│ • Total Chunks: 12               │
-│ • Total Characters: 5,234        │
-│ • Avg Chunk Size: 436            │
-└──────────────────────────────────┘
-```
+![RAG Data Assistant home page with upload and document statistics](screenshots/Home%20page.png)
 
-**2. Configuration Controls**
-```
-┌─ Sidebar Controls ────────────────┐
-│ Chunk Size: [━━━━━●━━] 500 chars │
-│ Chunk Overlap: [━━●━━━━] 50 chars│
-└───────────────────────────────────┘
-```
+### Asking a Question
+After a document is indexed, users can ask a natural language question. The app keeps the retrieved chunks visible so the answer can be checked against the source text.
 
-**3. Question Answering**
-```
-┌─ Ask a Question ──────────────────┐
-│ [What is machine learning?  ] [🔍]│
-│                                   │
-│ Retrieved Context (Top 3 Chunks): │
-│ ─────────────────────────────────│
-│ Chunk 1 (Relevance: 94%)          │
-│ "Machine learning is a subset..." │
-│ ─────────────────────────────────│
-│ Chunk 2 (Relevance: 87%)          │
-│ "Learning algorithms enable..."   │
-│ ─────────────────────────────────│
-│                                   │
-│ Generated Answer:                 │
-│ Based on the retrieved context... │
-└───────────────────────────────────┘
-```
+![Question input and retrieved context](screenshots/Ask%20a%20question.png)
+
+### Generated Answer
+The generated answer is shown separately from the retrieved context, giving users a concise response while preserving transparency.
+
+![Generated answer section](screenshots/Generated%20answer.png)
 
 ### Example Queries
-**Input**: "What are the benefits of RAG?"
-**Retrieved**: 3 chunks from sample_document.txt with 89-94% relevance
+- "What is the document about?"
+- "What are the week 5 activities?"
+- "What is the top skill shown in this resume?"
 
 ---
 
@@ -468,9 +444,9 @@ st.session_state.document_loaded  # UI state tracking
    - Cannot easily swap embedding models at runtime
    - Solution: Implement model selection in UI
 
-5. **Text Only**
-   - No PDF, DOCX, or image support
-   - Solution: Add PyPDF2, python-docx libraries
+5. **Text-Based Extraction**
+   - Supports TXT, PDF, and CSV files
+   - Scanned PDFs and image-only documents may not contain extractable text
 
 6. **CPU-Only Processing**
    - No GPU acceleration
@@ -584,7 +560,7 @@ from utils.document_loader import DocumentLoader
 loader = DocumentLoader(chunk_size=500, chunk_overlap=50)
 
 # Load and chunk text
-text = open("document.txt").read()
+text = open("document.txt", encoding="utf-8").read()
 chunks = loader.chunk_text(text)
 print(f"Created {len(chunks)} chunks")
 ```
@@ -598,7 +574,7 @@ This project is designed to be extended:
 1. **Add New Embedding Models**: Edit `retriever.py`
 2. **Customize Chunking**: Modify `document_loader.py`
 3. **Improve Answer Generation**: Extend `generator.py` with LLM
-4. **Add File Support**: Implement loaders for PDF, DOCX
+4. **Add More File Support**: Implement loaders for DOCX or images
 5. **Deploy to Production**: Containerize with Docker, deploy to cloud
 
 ---

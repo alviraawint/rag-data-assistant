@@ -2,8 +2,12 @@
 Document loader module for splitting documents into chunks.
 """
 
+import io
 import re
 from typing import List
+
+import pandas as pd
+from pypdf import PdfReader
 
 
 class DocumentLoader:
@@ -19,6 +23,78 @@ class DocumentLoader:
         """
         self.chunk_size = chunk_size
         self.chunk_overlap = chunk_overlap
+
+    def load_file(self, uploaded_file) -> str:
+        """
+        Load text from a Streamlit uploaded file.
+
+        Args:
+            uploaded_file: File uploaded through st.file_uploader
+
+        Returns:
+            Text extracted from the file
+        """
+        file_name = uploaded_file.name
+        file_type = file_name.rsplit(".", 1)[-1].lower()
+        file_bytes = uploaded_file.getvalue()
+
+        try:
+            if file_type == "txt":
+                return self.load_txt(file_bytes)
+            if file_type == "pdf":
+                return self.load_pdf(file_bytes)
+            if file_type == "csv":
+                return self.load_csv(file_bytes)
+        except Exception as error:
+            raise ValueError(f"Could not process {file_name}: {error}") from error
+
+        raise ValueError(f"Unsupported file type: .{file_type}")
+
+    def load_txt(self, file_bytes: bytes) -> str:
+        """Read plain text from a TXT file."""
+        text = file_bytes.decode("utf-8", errors="ignore")
+        if not text.strip():
+            raise ValueError("The text file is empty.")
+        return text
+
+    def load_pdf(self, file_bytes: bytes) -> str:
+        """Extract text from every page in a PDF file."""
+        reader = PdfReader(io.BytesIO(file_bytes))
+        page_texts = []
+
+        for page_number, page in enumerate(reader.pages, start=1):
+            text = page.extract_text() or ""
+            if text.strip():
+                page_texts.append(f"Page {page_number}\n{text.strip()}")
+
+        if not page_texts:
+            raise ValueError("No readable text was found in this PDF.")
+
+        return "\n\n".join(page_texts)
+
+    def load_csv(self, file_bytes: bytes) -> str:
+        """Convert CSV rows into readable text with column names."""
+        dataframe = pd.read_csv(io.BytesIO(file_bytes))
+
+        if len(dataframe.columns) == 0:
+            raise ValueError("The CSV file has no columns.")
+
+        lines = [f"Columns: {', '.join(dataframe.columns)}"]
+
+        if dataframe.empty:
+            lines.append("No rows found.")
+            return "\n".join(lines)
+
+        for row_number, (_, row) in enumerate(dataframe.iterrows(), start=1):
+            row_values = []
+            for column in dataframe.columns:
+                value = row[column]
+                if pd.isna(value):
+                    value = ""
+                row_values.append(f"{column}: {value}")
+            lines.append(f"Row {row_number}: " + "; ".join(row_values))
+
+        return "\n".join(lines)
 
     def load_text(self, text: str) -> str:
         """
