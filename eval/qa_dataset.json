@@ -1,0 +1,56 @@
+{
+  "document": "sample_document.txt",
+  "description": "Hand-labeled question set for evaluating retrieval over the sample document. Each question lists the gold 'evidence' text that a correctly retrieved chunk must contain. Evidence strings are matched case-insensitively after whitespace normalization, so they stay valid across different chunk sizes.",
+  "questions": [
+    {
+      "id": 1,
+      "question": "What does the RAG approach combine?",
+      "evidence": ["combines the strengths of retrieval-based and generation-based models"]
+    },
+    {
+      "id": 2,
+      "question": "How do RAG systems reduce hallucinations?",
+      "evidence": ["reduce hallucinations by grounding responses in actual documents"]
+    },
+    {
+      "id": 3,
+      "question": "Which vector databases are used for similarity search?",
+      "evidence": ["Vector databases like FAISS or Pinecone enable fast similarity search"]
+    },
+    {
+      "id": 4,
+      "question": "How is RAG used in customer support?",
+      "evidence": ["Customer support systems leverage RAG to provide accurate responses"]
+    },
+    {
+      "id": 5,
+      "question": "How can the retriever be optimized?",
+      "evidence": ["dense passage retrieval and hard negative mining"]
+    },
+    {
+      "id": 6,
+      "question": "What problem do long documents cause for language models?",
+      "evidence": ["Context window limitations in language models"]
+    },
+    {
+      "id": 7,
+      "question": "What future direction provides structured information?",
+      "evidence": ["Integration with knowledge graphs provides structured information"]
+    },
+    {
+      "id": 8,
+      "question": "What models are used to create embeddings?",
+      "evidence": ["transformer-based embeddings like BERT or Sentence-Transformers"]
+    },
+    {
+      "id": 9,
+      "question": "Why is RAG efficient compared to fine-tuning?",
+      "evidence": ["computationally efficient compared to fine-tuning large language models"]
+    },
+    {
+      "id": 10,
+      "question": "What is multi-hop reasoning in RAG?",
+      "evidence": ["Multi-hop reasoning over multiple retrieved documents"]
+    }
+  ]
+}

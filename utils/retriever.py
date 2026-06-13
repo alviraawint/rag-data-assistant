@@ -64,30 +64,36 @@ class EmbeddingRetriever:
 
     def create_embeddings(self, chunks: List[str]) -> np.ndarray:
         """
-        Create embeddings for a list of chunks.
-        
+        Create L2-normalized embeddings for a list of chunks.
+
+        all-MiniLM-L6-v2 is trained for cosine similarity, so we normalize the
+        vectors to unit length. On unit vectors, inner product == cosine
+        similarity, which is the correct metric for this model.
+
         Args:
             chunks: List of text chunks
-            
+
         Returns:
-            Array of embeddings
+            Array of unit-normalized embeddings
         """
-        embeddings = self.model.encode(chunks, convert_to_numpy=True)
+        embeddings = self.model.encode(
+            chunks, convert_to_numpy=True, normalize_embeddings=True
+        )
         return embeddings
 
     def build_index(self, chunks: List[str]) -> None:
         """
-        Build FAISS index from chunks.
-        
+        Build a cosine-similarity FAISS index from chunks.
+
         Args:
             chunks: List of text chunks
         """
         self.chunks = chunks
         embeddings = self.create_embeddings(chunks)
-        
-        # Create FAISS index
+
+        # Inner-product index over unit vectors = exact cosine-similarity search.
         dimension = embeddings.shape[1]
-        self.index = faiss.IndexFlatL2(dimension)
+        self.index = faiss.IndexFlatIP(dimension)
         self.index.add(embeddings.astype(np.float32))
 
     def retrieve(self, query: str, k: int = 3) -> List[Tuple[str, float]]:
@@ -103,17 +109,20 @@ class EmbeddingRetriever:
         """
         if self.index is None or len(self.chunks) == 0:
             return []
-        
-        query_embedding = self.model.encode([query], convert_to_numpy=True)
-        distances, indices = self.index.search(query_embedding.astype(np.float32), k)
-        
+
+        query_embedding = self.model.encode(
+            [query], convert_to_numpy=True, normalize_embeddings=True
+        )
+        scores, indices = self.index.search(query_embedding.astype(np.float32), k)
+
         results = []
-        for idx, distance in zip(indices[0], distances[0]):
+        for idx, score in zip(indices[0], scores[0]):
             if idx < len(self.chunks):
-                # Convert L2 distance to similarity score (lower distance = higher relevance)
-                similarity = 1 / (1 + distance)
+                # Inner product of unit vectors is the cosine similarity directly.
+                # Clamp tiny negatives to 0 for a clean [0, 1] relevance display.
+                similarity = max(0.0, float(score))
                 results.append((self.chunks[idx], similarity))
-        
+
         return results
 
     def is_empty(self) -> bool:

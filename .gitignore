@@ -51,6 +51,9 @@ env/
 *.faiss
 .cache/
 
+# Generated evaluation outputs (numbers live in the README)
+eval/results*.json
+
 # Environment variables
 .env
 .env.local
